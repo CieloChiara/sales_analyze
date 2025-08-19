@@ -445,7 +445,7 @@ export default function App() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>事業所名</Label>
-                    <Input value={state.business.name} onChange={(e) => setState({ ...state, business: { ...state.business, name: e.target.value } })} placeholder="例）AiHUB株式会社"/>
+                    <Input value={state.business.name} onChange={(e) => setState({ ...state, business: { ...state.business, name: e.target.value } })} placeholder="例）テスト株式会社"/>
                   </div>
                   <div className="space-y-2">
                     <Label>通貨</Label>
