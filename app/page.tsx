@@ -7,16 +7,6 @@ import dayjs from "dayjs";
 import "dayjs/locale/ja";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import {
-  AreaChart,
-  Area,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 
 // shadcn/ui imports
 import { Button } from "@/components/ui/button";
@@ -31,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FileUpload } from "@/components/ui/file-upload";
+import { ForecastReport } from "@/components/ForecastReport";
+import { ForecastInput, MonthlyPL } from "@/lib/finance";
 
 // -------------------- 型定義 --------------------
 
@@ -343,6 +335,66 @@ export default function App() {
 
 
   const isActualMonth = (m: string) => !!(state.actuals[m] && Object.keys(state.actuals[m]).length);
+
+  // ForecastReport用のデータ変換
+  const forecastInputData = useMemo((): ForecastInput | null => {
+    if (!state.fiscal || months.length === 0) return null;
+
+    // 月次データをMonthlyPL形式に変換
+    const monthlyData: MonthlyPL[] = months.map(month => {
+      const actual = state.actuals[month] || {};
+      const plan = state.plan[month] || {};
+      
+      // 売上高、売上原価、販管費の集計
+      let sales = 0;
+      let cogs = 0;
+      let sga = 0;
+      let nonOperating = 0;
+      let taxes = 0;
+
+      for (const acc of plAccounts) {
+        const value = actual[acc.code] ?? plan[acc.code] ?? 0;
+        
+        // PLカテゴリに基づいて分類
+        if (acc.plCategory === "Revenue") {
+          // 収益項目は売上高として集計
+          sales += Math.abs(value); // 収益は通常負の値なので絶対値を取る
+        } else if (acc.plCategory === "Expense") {
+          const name = acc.name.toLowerCase();
+          // 費用項目を売上原価と販管費に分類
+          if (name.includes("原価") || name.includes("仕入") || name.includes("cost of")) {
+            cogs += Math.abs(value);
+          } else if (name.includes("税") || name.includes("法人税")) {
+            taxes += Math.abs(value);
+          } else {
+            sga += Math.abs(value);
+          }
+        } else if (acc.plCategory === "Other") {
+          // その他は営業外損益として扱う
+          nonOperating += value;
+        }
+      }
+
+      return {
+        month: month as MonthlyPL['month'],
+        sales,
+        cogs,
+        sga,
+        nonOperating,
+        taxes,
+        isActual: isActualMonth(month)
+      };
+    });
+
+    return {
+      companyName: state.business.name || "未設定",
+      scopeLabel: "全社",
+      currency: state.business.currency as ForecastInput['currency'],
+      periodStart: state.fiscal.startMonth as MonthlyPL['month'],
+      periodEnd: state.fiscal.endMonth as MonthlyPL['month'],
+      data: monthlyData
+    };
+  }, [state, months, plAccounts, isActualMonth]);
 
   // --------- エクスポート ---------
   const exportCSV = () => {
@@ -726,79 +778,24 @@ export default function App() {
 
           {/* 決算予測レポート */}
           <TabsContent value="report" className="mt-4 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {forecastInputData ? (
+              <ForecastReport
+                input={forecastInputData}
+                handlers={{
+                  onExportCSV: exportCSV,
+                  onExportPDF: exportPDF,
+                }}
+              />
+            ) : (
               <Card>
-                <CardHeader><CardTitle>予測売上合計</CardTitle></CardHeader>
-                <CardContent className="text-2xl font-bold">{fmt.format(totalYear.Revenue)}</CardContent>
+                <CardContent className="py-10">
+                  <div className="text-center text-gray-500">
+                    <p className="mb-2">データがありません</p>
+                    <p className="text-sm">CSVをインポートして、会計期間を設定してください</p>
+                  </div>
+                </CardContent>
               </Card>
-              <Card>
-                <CardHeader><CardTitle>予測費用合計</CardTitle></CardHeader>
-                <CardContent className="text-2xl font-bold">{fmt.format(totalYear.Expense)}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle>予測利益</CardTitle></CardHeader>
-                <CardContent className="text-2xl font-bold">{fmt.format(totalYear.Profit)}</CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>月次推移（収益・費用・利益）</CardTitle>
-                <CardDescription>実績は自動採用、未実績は計画値を使用。</CardDescription>
-              </CardHeader>
-              <CardContent style={{ height: 340 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecastByMonth} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(v: number) => fmt.format(v)} />
-                    <Legend />
-                    <Area type="monotone" dataKey="Revenue" name="収益" strokeWidth={2} fillOpacity={0.2} />
-                    <Area type="monotone" dataKey="Expense" name="費用" strokeWidth={2} fillOpacity={0.2} />
-                    <Area type="monotone" dataKey="Profit" name="利益" strokeWidth={2} fillOpacity={0.2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>予測損益計算書（簡易）</CardTitle>
-                <CardDescription>PL科目の区分に基づき集計。詳細行は計画タブで編集できます。</CardDescription>
-              </CardHeader>
-              <CardContent ref={reportRef} className="overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="p-2 text-left">区分</th>
-                      {months.map((m) => (<th key={m} className="p-2 text-right whitespace-nowrap">{m}</th>))}
-                      <th className="p-2 text-right">合計</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* 収益 */}
-                    <tr className="bg-white">
-                      <td className="p-2 font-medium">収益</td>
-                      {months.map((m) => <td key={m} className="p-2 text-right">{fmt.format(forecastByMonth.find(r => r.month === m)?.Revenue || 0)}</td>)}
-                      <td className="p-2 text-right font-semibold">{fmt.format(totalYear.Revenue)}</td>
-                    </tr>
-                    {/* 費用 */}
-                    <tr className="bg-slate-50/60">
-                      <td className="p-2 font-medium">費用</td>
-                      {months.map((m) => <td key={m} className="p-2 text-right">{fmt.format(forecastByMonth.find(r => r.month === m)?.Expense || 0)}</td>)}
-                      <td className="p-2 text-right font-semibold">{fmt.format(totalYear.Expense)}</td>
-                    </tr>
-                    {/* 利益 */}
-                    <tr className="bg-white">
-                      <td className="p-2 font-medium">利益</td>
-                      {months.map((m) => <td key={m} className="p-2 text-right">{fmt.format(forecastByMonth.find(r => r.month === m)?.Profit || 0)}</td>)}
-                      <td className="p-2 text-right font-semibold">{fmt.format(totalYear.Profit)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            )}
           </TabsContent>
 
           {/* API連携(β) */}
