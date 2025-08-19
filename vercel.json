@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd sales-analyze && npm run build",
+  "buildCommand": "npm run build",
   "outputDirectory": "sales-analyze/.next",
-  "installCommand": "cd sales-analyze && npm install",
-  "devCommand": "cd sales-analyze && npm run dev"
+  "installCommand": "npm install",
+  "devCommand": "npm run dev"
 }
