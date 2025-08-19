@@ -263,7 +263,7 @@ export const ForecastReport: React.FC<ForecastReportProps> = ({ input, handlers 
                 dataKey="営業利益率" 
                 stroke="#ef4444" 
                 strokeWidth={2}
-                dot={{ r: 4, shape: 'square' }}
+                dot={{ r: 4 }}
               />
             </ComposedChart>
           </ResponsiveContainer>
