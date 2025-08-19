@@ -29,6 +29,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { DatePicker } from "@/components/ui/date-picker";
+import { FileUpload } from "@/components/ui/file-upload";
 
 // -------------------- 型定義 --------------------
 
@@ -471,12 +473,20 @@ export default function App() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label>開始月 (YYYY-MM)</Label>
-                    <Input value={state.fiscal?.startMonth || ""} onChange={(e) => setState({ ...state, fiscal: { ...(state.fiscal || { startMonth: "", endMonth: "" }), startMonth: e.target.value } })} placeholder="2025-01"/>
+                    <Label>開始月</Label>
+                    <DatePicker 
+                      value={state.fiscal?.startMonth || ""} 
+                      onChange={(value) => setState({ ...state, fiscal: { ...(state.fiscal || { startMonth: "", endMonth: "" }), startMonth: value } })} 
+                      placeholder="開始月を選択"
+                    />
                   </div>
                   <div>
-                    <Label>終了月 (YYYY-MM)</Label>
-                    <Input value={state.fiscal?.endMonth || ""} onChange={(e) => setState({ ...state, fiscal: { ...(state.fiscal || { startMonth: "", endMonth: "" }), endMonth: e.target.value } })} placeholder="2025-12"/>
+                    <Label>終了月</Label>
+                    <DatePicker 
+                      value={state.fiscal?.endMonth || ""} 
+                      onChange={(value) => setState({ ...state, fiscal: { ...(state.fiscal || { startMonth: "", endMonth: "" }), endMonth: value } })} 
+                      placeholder="終了月を選択"
+                    />
                   </div>
                   <div className="flex items-end"><Badge variant="outline">月数: {months.length}</Badge></div>
                 </CardContent>
@@ -541,12 +551,17 @@ export default function App() {
                 <CardDescription>freee/Money ForwardからエクスポートしたCSVを読み込み、実績を取り込みます。</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-                  <input type="file" accept=".csv" onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleCSVFile(f);
-                  }} />
-                  <Button variant="outline" onClick={downloadTemplate}><Download className="w-4 h-4 mr-2"/>テンプレCSV</Button>
+                <div className="space-y-4">
+                  <FileUpload 
+                    onFileSelect={handleCSVFile}
+                    accept=".csv"
+                  />
+                  <div className="flex justify-center">
+                    <Button variant="outline" onClick={downloadTemplate}>
+                      <Download className="w-4 h-4 mr-2"/>
+                      テンプレートCSVをダウンロード
+                    </Button>
+                  </div>
                 </div>
                 {importHeaders.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
