@@ -337,38 +337,59 @@ export default function App() {
       let cogs = 0;
       let sga = 0;
       let nonOperating = 0;
+      let extraordinary = 0;
       let taxes = 0;
 
       for (const acc of plAccounts) {
-        const value = actual[acc.code] ?? plan[acc.code] ?? 0;
+        const value = Number(actual[acc.code] ?? plan[acc.code] ?? 0);
         
         // PLカテゴリに基づいて分類
         if (acc.plCategory === "Revenue") {
-          // 収益項目は売上高として集計
-          sales += Math.abs(value); // 収益は通常負の値なので絶対値を取る
+          // 収益項目は通常負の値で記録されるので、正の値に変換
+          // freee/MFの仕様: 収益は貸方（マイナス）、費用は借方（プラス）
+          sales += Math.abs(value);
         } else if (acc.plCategory === "Expense") {
           const name = acc.name.toLowerCase();
-          // 費用項目を売上原価と販管費に分類
-          if (name.includes("原価") || name.includes("仕入") || name.includes("cost of")) {
-            cogs += Math.abs(value);
-          } else if (name.includes("税") || name.includes("法人税")) {
-            taxes += Math.abs(value);
+          // 費用項目を売上原価、販管費、税金に分類
+          // 費用は通常正の値で記録される
+          const expenseValue = Math.abs(value);
+          
+          if (name.includes("原価") || name.includes("仕入") || name.includes("cost of") || 
+              name.includes("製造") || name.includes("材料")) {
+            cogs += expenseValue;
+          } else if (name.includes("法人税") || name.includes("事業税") || name.includes("住民税")) {
+            taxes += expenseValue;
+          } else if (name.includes("特別損") || name.includes("特別利")) {
+            // 特別損失は正、特別利益は負として扱う
+            extraordinary += name.includes("特別利") ? -expenseValue : expenseValue;
           } else {
-            sga += Math.abs(value);
+            // その他は販管費として扱う
+            sga += expenseValue;
           }
         } else if (acc.plCategory === "Other") {
-          // その他は営業外損益として扱う
-          nonOperating += value;
+          // その他（営業外収益・費用）
+          const name = acc.name.toLowerCase();
+          if (name.includes("営業外収") || name.includes("受取利息") || name.includes("受取配当")) {
+            // 営業外収益は負の値を正に変換
+            nonOperating += Math.abs(value);
+          } else if (name.includes("営業外費") || name.includes("支払利息")) {
+            // 営業外費用は正の値を負に変換
+            nonOperating -= Math.abs(value);
+          } else {
+            // その他はそのまま加算
+            nonOperating += value;
+          }
         }
       }
 
       return {
         month: month as MonthlyPL['month'],
-        sales,
-        cogs,
-        sga,
-        nonOperating,
-        taxes,
+        sales: Math.round(sales * 100) / 100,  // 小数点2桁で丸める
+        cogs: Math.round(cogs * 100) / 100,
+        sga: Math.round(sga * 100) / 100,
+        nonOperating: Math.round(nonOperating * 100) / 100,
+        extraordinary: Math.round(extraordinary * 100) / 100,
+        taxes: Math.round(taxes * 100) / 100,
         isActual: isActualMonth(month)
       };
     });

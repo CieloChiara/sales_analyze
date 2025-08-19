@@ -41,13 +41,19 @@ export interface CalculatedPL extends MonthlyPL {
  * 月次PLデータから各種利益と利益率を計算
  */
 export function calculatePL(data: MonthlyPL): CalculatedPL {
-  const grossProfit = data.sales - data.cogs;
-  const operatingProfit = grossProfit - data.sga;
-  const netIncome = operatingProfit + 
+  // 高精度計算のために小数点以下を適切に処理
+  const roundToTwo = (num: number) => Math.round(num * 100) / 100;
+  
+  const grossProfit = roundToTwo(data.sales - data.cogs);
+  const operatingProfit = roundToTwo(grossProfit - data.sga);
+  const netIncome = roundToTwo(
+    operatingProfit + 
     (data.nonOperating || 0) + 
     (data.extraordinary || 0) - 
-    (data.taxes || 0);
+    (data.taxes || 0)
+  );
   
+  // 売上高が0の場合はnullを返す
   const grossMargin = data.sales !== 0 ? grossProfit / data.sales : null;
   const operatingMargin = data.sales !== 0 ? operatingProfit / data.sales : null;
 
@@ -81,12 +87,16 @@ export function calculateCumulative(data: MonthlyPL[]): CalculatedPL {
     taxes: 0,
   });
 
-  const grossProfit = totals.sales - totals.cogs;
-  const operatingProfit = grossProfit - totals.sga;
-  const netIncome = operatingProfit + 
+  const roundToTwo = (num: number) => Math.round(num * 100) / 100;
+  
+  const grossProfit = roundToTwo(totals.sales - totals.cogs);
+  const operatingProfit = roundToTwo(grossProfit - totals.sga);
+  const netIncome = roundToTwo(
+    operatingProfit + 
     (totals.nonOperating || 0) + 
     (totals.extraordinary || 0) - 
-    (totals.taxes || 0);
+    (totals.taxes || 0)
+  );
 
   return {
     month: 'cumulative' as Month,
@@ -109,12 +119,15 @@ export function calculateCumulative(data: MonthlyPL[]): CalculatedPL {
  * 通貨フォーマット
  */
 export function formatCurrency(value: number, currency: string): string {
+  // 数値の精度を保ちつつ、適切にフォーマット
+  const roundedValue = Math.round(value * 100) / 100;
+  
   return new Intl.NumberFormat('ja-JP', {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+    maximumFractionDigits: currency === 'JPY' ? 0 : 2,
+  }).format(roundedValue);
 }
 
 /**

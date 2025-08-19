@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   eslint: {
     // Allow production builds to succeed even if there are ESLint errors
     ignoreDuringBuilds: false,
