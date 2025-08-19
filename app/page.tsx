@@ -68,9 +68,6 @@ type AppState = {
 
 // -------------------- ユーティリティ --------------------
 
-const CURRENCY_FORMATTER = (currency: CurrencyCode) =>
-  new Intl.NumberFormat("ja-JP", { style: "currency", currency, maximumFractionDigits: 0 });
-
 const monthRange = (startMonth: string, endMonth: string) => {
   const start = dayjs(startMonth + "-01");
   const end = dayjs(endMonth + "-01");
@@ -141,8 +138,6 @@ export default function App() {
   }, [state.fiscal]);
 
   const plAccounts = useMemo(() => state.accounts.filter(a => a.statement === "PL"), [state.accounts]);
-
-  const currency = state.business.currency || "JPY";
 
   // --------- 取り込み処理 ---------
 
