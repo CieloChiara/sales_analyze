@@ -105,8 +105,6 @@ const guessPLCategory = (name: string): PLCat => {
   return "Other";
 };
 
-const ensureObject = (o: unknown) => (o ? o : {});
-
 const LS_KEY = "forecast-pl-app-v1";
 
 // -------------------- メインコンポーネント --------------------
@@ -249,7 +247,7 @@ export default function App() {
     // 実績集計
     const actuals: AppState["actuals"] = JSON.parse(JSON.stringify(state.actuals));
     for (const r of rows) {
-      actuals[r.month] = ensureObject(actuals[r.month]);
+      actuals[r.month] = actuals[r.month] || {};
       actuals[r.month][r.accountCode] = (actuals[r.month][r.accountCode] || 0) + r.amount;
     }
 
@@ -298,7 +296,7 @@ export default function App() {
   const setPlanAmount = (month: string, code: string, amount: number) => {
     setState((prev) => {
       const plan = JSON.parse(JSON.stringify(prev.plan));
-      plan[month] = ensureObject(plan[month]);
+      plan[month] = plan[month] || {};
       plan[month][code] = amount;
       return { ...prev, plan };
     });
@@ -320,8 +318,8 @@ export default function App() {
     // 月次ごとの Revenue/Expense/Profit
     const rows = monthsWithData.map((m) => {
       let rev = 0, exp = 0;
-      const actual = ensureObject(state.actuals[m]);
-      const plan = ensureObject(state.plan[m]);
+      const actual = state.actuals[m] || {};
+      const plan = state.plan[m] || {};
 
       // 全科目
       for (const acc of plAccounts) {
@@ -348,8 +346,8 @@ export default function App() {
   const exportCSV = () => {
     const data: Record<string, string | number>[] = [];
     for (const m of monthsWithData) {
-      const actual = ensureObject(state.actuals[m]);
-      const plan = ensureObject(state.plan[m]);
+      const actual = state.actuals[m] || {};
+      const plan = state.plan[m] || {};
       const row: Record<string, string | number> = { month: m };
       for (const acc of plAccounts) {
         const v = (actual[acc.code] ?? plan[acc.code] ?? 0) as number;
