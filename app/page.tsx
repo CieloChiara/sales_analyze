@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Save, Upload, FileDown, FileText, Settings, Building2, CalendarClock, RefreshCw, Trash2, Download, Table2, Braces, BookOpenText, LineChart as LineChartIcon } from "lucide-react";
 import Papa from "papaparse";
 import dayjs from "dayjs";
@@ -143,7 +143,6 @@ export default function App() {
   const plAccounts = useMemo(() => state.accounts.filter(a => a.statement === "PL"), [state.accounts]);
 
   const currency = state.business.currency || "JPY";
-  const fmt = CURRENCY_FORMATTER(currency);
 
   // --------- 取り込み処理 ---------
 
@@ -327,14 +326,7 @@ export default function App() {
     return rows;
   }, [monthsWithData, state.actuals, state.plan, plAccounts]);
 
-  const totalYear = useMemo(() => {
-    let rev = 0, exp = 0;
-    for (const r of forecastByMonth) { rev += r.Revenue; exp += r.Expense; }
-    return { Revenue: rev, Expense: exp, Profit: rev - exp };
-  }, [forecastByMonth]);
-
-
-  const isActualMonth = (m: string) => !!(state.actuals[m] && Object.keys(state.actuals[m]).length);
+  const isActualMonth = useCallback((m: string) => !!(state.actuals[m] && Object.keys(state.actuals[m]).length), [state.actuals]);
 
   // ForecastReport用のデータ変換
   const forecastInputData = useMemo((): ForecastInput | null => {
@@ -390,8 +382,8 @@ export default function App() {
       companyName: state.business.name || "未設定",
       scopeLabel: "全社",
       currency: state.business.currency as ForecastInput['currency'],
-      periodStart: state.fiscal.startMonth as MonthlyPL['month'],
-      periodEnd: state.fiscal.endMonth as MonthlyPL['month'],
+      periodStart: state.fiscal!.startMonth as MonthlyPL['month'],
+      periodEnd: state.fiscal!.endMonth as MonthlyPL['month'],
       data: monthlyData
     };
   }, [state, months, plAccounts, isActualMonth]);

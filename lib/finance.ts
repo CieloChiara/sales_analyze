@@ -133,7 +133,7 @@ export function formatPercentage(value: number | null): string {
  * 月のラベル形式化 (YYYY-MM -> MM月)
  */
 export function formatMonthLabel(month: Month): string {
-  const [year, monthNum] = month.split('-');
+  const [, monthNum] = month.split('-');
   return `${parseInt(monthNum)}月`;
 }
 

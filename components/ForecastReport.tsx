@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  BarChart,
   Bar,
   Line,
   XAxis,
@@ -20,14 +19,13 @@ import { FileDown, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 import {
   ForecastInput,
   Handlers,
-  MonthlyPL,
   calculatePL,
   calculateCumulative,
   formatCurrency,
   formatPercentage,
   formatMonthLabel,
   filterDataByPeriod,
-  CalculatedPL,
+  Month,
 } from '@/lib/finance';
 
 interface ForecastReportProps {
@@ -71,7 +69,7 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subValue, trend, classN
 
 export const ForecastReport: React.FC<ForecastReportProps> = ({ input, handlers = {} }) => {
   const [viewMode, setViewMode] = useState<'monthly' | 'cumulative'>('monthly');
-  const [selectedPeriod, setSelectedPeriod] = useState<{ start: string; end: string }>({
+  const [selectedPeriod] = useState<{ start: string; end: string }>({
     start: input.periodStart,
     end: input.periodEnd,
   });
@@ -80,8 +78,8 @@ export const ForecastReport: React.FC<ForecastReportProps> = ({ input, handlers 
   const calculatedData = useMemo(() => {
     const filtered = filterDataByPeriod(
       input.data,
-      selectedPeriod.start as any,
-      selectedPeriod.end as any
+      selectedPeriod.start as Month,
+      selectedPeriod.end as Month
     );
     return filtered.map(calculatePL);
   }, [input.data, selectedPeriod]);
@@ -154,7 +152,7 @@ export const ForecastReport: React.FC<ForecastReportProps> = ({ input, handlers 
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
-          <Select value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+          <Select value={viewMode} onValueChange={(v) => setViewMode(v as 'monthly' | 'cumulative')}>
             <SelectTrigger className="w-[120px]">
               <SelectValue />
             </SelectTrigger>
