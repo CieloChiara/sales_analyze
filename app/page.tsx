@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Save, Upload, FileDown, FileText, Settings, Building2, CalendarClock, RefreshCw, Plus, Trash2, Download, Database, Table2, Braces, BookOpenText, LineChart as LineChartIcon } from "lucide-react";
+import { Save, Upload, FileDown, FileText, Settings, Building2, CalendarClock, RefreshCw, Trash2, Download, Table2, Braces, BookOpenText, LineChart as LineChartIcon } from "lucide-react";
 import Papa from "papaparse";
 import dayjs from "dayjs";
 import "dayjs/locale/ja";
@@ -25,11 +25,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 
 // -------------------- 型定義 --------------------
 
@@ -90,7 +89,7 @@ const monthRange = (startMonth: string, endMonth: string) => {
   return arr;
 };
 
-const uniqBy = <T, K extends keyof any>(arr: T[], keyFn: (v: T) => K) => {
+const uniqBy = <T, K>(arr: T[], keyFn: (v: T) => K) => {
   const map = new Map<K, T>();
   for (const item of arr) {
     const k = keyFn(item);
@@ -106,7 +105,7 @@ const guessPLCategory = (name: string): PLCat => {
   return "Other";
 };
 
-const ensureObject = (o: any) => (o ? o : {});
+const ensureObject = (o: unknown) => (o ? o : {});
 
 const LS_KEY = "forecast-pl-app-v1";
 
@@ -133,7 +132,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>("settings");
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<{ [k: string]: string }>({});
-  const [previewRows, setPreviewRows] = useState<any[]>([]);
+  const [previewRows, setPreviewRows] = useState<Record<string, string>[]>([]);
   const [hideOther, setHideOther] = useState<boolean>(true);
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -161,7 +160,7 @@ export default function App() {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const rows = results.data as any[];
+        const rows = results.data as Record<string, string>[];
         if (!rows.length) return;
         setPreviewRows(rows.slice(0, 20));
         const headers = Object.keys(rows[0]);
@@ -170,7 +169,7 @@ export default function App() {
         const lowerMap: Record<string, string> = {};
         headers.forEach(h => lowerMap[h.toLowerCase()] = h);
         const guess = (keys: string[]) => keys.find(k => lowerMap[k]);
-        const m: any = {};
+        const m: Record<string, string> = {};
         m.month = guess(["month", "ym", "date", "期間", "月", "会計月", "会計期間", "年月"]) || headers[0];
         m.accountCode = guess(["account_code", "code", "科目コード", "勘定科目コード"]) || headers[1] || headers[0];
         m.accountName = guess(["account_name", "name", "科目名", "勘定科目", "勘定科目名"]) || headers[2] || headers[0];
@@ -197,7 +196,7 @@ export default function App() {
     return t;
   };
 
-  const toNumber = (v: any) => {
+  const toNumber = (v: unknown) => {
     if (typeof v === "number") return v;
     if (v == null) return 0;
     const s = String(v).replace(/[,\s]/g, "");
@@ -211,7 +210,7 @@ export default function App() {
     let minMonth: string | null = null;
     let maxMonth: string | null = null;
 
-    for (const r of previewRows.concat((window as any).ALL_PARSED_ROWS || [])) {
+    for (const r of previewRows) {
       // 上でPapaparseはpreviewのみ設定。大量でも対応できるようwindowに一時退避する実装も可能だが、ここでは簡易化
       const month = normalizeMonth(r[mapping.month]);
       const accountCode = String(r[mapping.accountCode] ?? "").trim();
@@ -342,20 +341,16 @@ export default function App() {
     return { Revenue: rev, Expense: exp, Profit: rev - exp };
   }, [forecastByMonth]);
 
-  const lastActualMonth = useMemo(() => {
-    const ms = Object.keys(state.actuals || {}).sort();
-    return ms.length ? ms[ms.length - 1] : "";
-  }, [state.actuals]);
 
   const isActualMonth = (m: string) => !!(state.actuals[m] && Object.keys(state.actuals[m]).length);
 
   // --------- エクスポート ---------
   const exportCSV = () => {
-    const data: any[] = [];
+    const data: Record<string, string | number>[] = [];
     for (const m of monthsWithData) {
       const actual = ensureObject(state.actuals[m]);
       const plan = ensureObject(state.plan[m]);
-      const row: any = { month: m };
+      const row: Record<string, string | number> = { month: m };
       for (const acc of plAccounts) {
         const v = (actual[acc.code] ?? plan[acc.code] ?? 0) as number;
         row[`${acc.code}:${acc.name}`] = v;
@@ -503,7 +498,7 @@ export default function App() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Switch checked={hideOther} onCheckedChange={setHideOther} />
-                    <span className="text-sm text-slate-600">"その他"を非表示</span>
+                    <span className="text-sm text-slate-600">&quot;その他&quot;を非表示</span>
                   </div>
                   <div className="text-sm text-slate-500">PL科目数: {plAccounts.length}</div>
                 </div>
@@ -744,7 +739,7 @@ export default function App() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(v: any) => fmt.format(v as number)} />
+                    <Tooltip formatter={(v: number) => fmt.format(v)} />
                     <Legend />
                     <Area type="monotone" dataKey="Revenue" name="収益" strokeWidth={2} fillOpacity={0.2} />
                     <Area type="monotone" dataKey="Expense" name="費用" strokeWidth={2} fillOpacity={0.2} />
